@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
-// ✅ 타입 정의 추가
+// ✅ 타입 정의
 interface Contract {
   _id: string;
   title: string;
@@ -29,6 +29,7 @@ const SignaturePad: React.FC = () => {
 
   const handleSubmit = async () => {
     const selected = contractList.find((c) => c._id === selectedContract);
+
     if (!selectedContract) {
       alert("서명할 계약서를 선택하세요.");
       return;
@@ -63,6 +64,7 @@ const SignaturePad: React.FC = () => {
       });
 
       if (!res.ok) throw new Error("서명 실패");
+
       setStatus("✅ 서명 완료");
       sigCanvas.current?.clear();
       setSigner("");
@@ -107,11 +109,33 @@ const SignaturePad: React.FC = () => {
         backgroundColor="#f0f0f0"
       />
 
-      <div style={{ marginTop: "10px" }}>
-        <button onClick={handleClear} style={{ marginRight: "10px" }}>
+      <div style={{ marginTop: "10px", display: "flex", gap: "10px" }}>
+        <button
+          onClick={handleClear}
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#757575",
+            color: "#fff",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+          }}
+        >
           지우기
         </button>
-        <button onClick={handleSubmit}>서명 제출</button>
+        <button
+          onClick={handleSubmit}
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#1976d2",
+            color: "#fff",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+          }}
+        >
+          서명 제출
+        </button>
       </div>
 
       {status && <p style={{ marginTop: "10px" }}>{status}</p>}

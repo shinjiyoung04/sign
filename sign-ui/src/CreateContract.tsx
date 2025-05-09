@@ -70,7 +70,19 @@ const CreateContract: React.FC = () => {
           <option value="근로 계약서">근로 계약서</option>
           <option value="기타">기타</option>
         </select>
-        <button type="submit" style={{ marginTop: "10px" }}>저장</button>
+        <button
+          onClick={handleSubmit}
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#1976d2",
+            color: "#fff",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+          }}
+        >
+          계약서 생성
+        </button>
       </form>
       {status && <p style={{ marginTop: "10px" }}>{status}</p>}
     </div>

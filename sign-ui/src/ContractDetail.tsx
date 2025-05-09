@@ -68,24 +68,29 @@ const ContractDetail: React.FC = () => {
 
   const handleDelete = async () => {
     if (!contract) return;
+
+    const encodedName = encodeURIComponent(signerName.trim());
+
     try {
-      const res = await fetch(`http://localhost:3001/api/contracts/${contract._id}`, {
+      const res = await fetch(`http://localhost:3001/api/contracts/${contract._id}?name=${encodedName}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: signerName }),
       });
+
       if (!res.ok) throw new Error("삭제 실패");
       alert("✅ 계약서 삭제 완료");
       navigate("/contracts");
     } catch {
-      alert("❌ 삭제 실패: 이름이 일치하지 않거나 오류 발생");
+      alert("❌ 삭제 실패: 생성자 이름이 정확히 일치해야 합니다.");
     }
   };
 
+  // ✅ 생성자만 삭제 버튼 보이도록 처리 (공백, 대소문자 무시 비교)
+  const canDelete =
+    signerName.trim().toLowerCase() &&
+    contract?.creator?.trim().toLowerCase() === signerName.trim().toLowerCase();
+
   if (error) return <p style={{ padding: "30px", color: "red" }}>{error}</p>;
   if (!contract) return <p style={{ padding: "30px" }}>불러오는 중...</p>;
-
-  const canDelete = contract.signed && signerName.trim() && (signerName === contract.creator || signerName === contract.signer);
 
   return (
     <div style={{ padding: "30px" }}>
@@ -100,7 +105,7 @@ const ContractDetail: React.FC = () => {
 
       <input
         type="text"
-        placeholder="본인 이름 입력 (생성자 또는 서명자)"
+        placeholder="본인 이름 입력 (생성자만 삭제 가능)"
         value={signerName}
         onChange={(e) => setSignerName(e.target.value)}
         style={{ padding: "8px", margin: "20px 0 10px 0", width: "300px" }}

@@ -1,10 +1,9 @@
-// 🔹 src/ContractDetail.tsx
 import React, { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import SignatureCanvas from "react-signature-canvas";
 
-type Contract = {
+interface Contract {
   _id: string;
   title: string;
   content: string;
@@ -12,16 +11,18 @@ type Contract = {
   createdAt: string;
   signed: boolean;
   signer?: string;
-};
+  creator?: string;
+}
 
 const ContractDetail: React.FC = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [contract, setContract] = useState<Contract | null>(null);
   const [error, setError] = useState("");
   const [signerName, setSignerName] = useState("");
   const [showSignature, setShowSignature] = useState(false);
   const [status, setStatus] = useState("");
-  const sigCanvas = useRef<SignatureCanvas | null>(null);
+  const sigCanvas = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
     fetch(`http://localhost:3001/api/contracts/${id}`)
@@ -61,12 +62,30 @@ const ContractDetail: React.FC = () => {
       setContract(updated.contract);
       setStatus("✅ 서명 완료");
     } catch {
-      alert("서명 이미지 처리 중 오류가 발생했습니다.");
+      alert("서명 중 오류 발생");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!contract) return;
+    try {
+      const res = await fetch(`http://localhost:3001/api/contracts/${contract._id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: signerName }),
+      });
+      if (!res.ok) throw new Error("삭제 실패");
+      alert("✅ 계약서 삭제 완료");
+      navigate("/contracts");
+    } catch {
+      alert("❌ 삭제 실패: 이름이 일치하지 않거나 오류 발생");
     }
   };
 
   if (error) return <p style={{ padding: "30px", color: "red" }}>{error}</p>;
   if (!contract) return <p style={{ padding: "30px" }}>불러오는 중...</p>;
+
+  const canDelete = contract.signed && signerName.trim() && (signerName === contract.creator || signerName === contract.signer);
 
   return (
     <div style={{ padding: "30px" }}>
@@ -75,21 +94,20 @@ const ContractDetail: React.FC = () => {
       <p><strong>서명 여부:</strong> {contract.signed ? "✅ 완료" : "❌ 미완료"}</p>
       <p><strong>서명자:</strong> {contract.signer || "없음"}</p>
       <hr />
-      <pre style={{ whiteSpace: "pre-wrap", backgroundColor: "#f8f8f8", padding: "10px" }}>
-        {contract.content}
-      </pre>
+      <pre style={{ whiteSpace: "pre-wrap", backgroundColor: "#f8f8f8", padding: "10px" }}>{contract.content}</pre>
       <hr />
       <p><strong>해시값:</strong><br />{contract.hash}</p>
 
+      <input
+        type="text"
+        placeholder="본인 이름 입력 (생성자 또는 서명자)"
+        value={signerName}
+        onChange={(e) => setSignerName(e.target.value)}
+        style={{ padding: "8px", margin: "20px 0 10px 0", width: "300px" }}
+      />
+
       {!contract.signed && (
-        <div style={{ marginTop: "20px" }}>
-          <input
-            type="text"
-            placeholder="서명자 이름 입력"
-            value={signerName}
-            onChange={(e) => setSignerName(e.target.value)}
-            style={{ padding: "8px", marginRight: "10px", width: "200px" }}
-          />
+        <div style={{ marginTop: "10px" }}>
           <button
             onClick={handleStartSign}
             style={{ padding: "10px 20px", backgroundColor: "#1565c0", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}
@@ -116,14 +134,21 @@ const ContractDetail: React.FC = () => {
         </div>
       )}
 
+      {canDelete && (
+        <div style={{ marginTop: "20px" }}>
+          <button
+            onClick={handleDelete}
+            style={{ backgroundColor: "#d32f2f", color: "white", padding: "10px 20px", border: "none", borderRadius: "5px", cursor: "pointer" }}
+          >
+            🗑️ 계약서 삭제
+          </button>
+        </div>
+      )}
+
       {status && <p style={{ marginTop: "10px" }}>{status}</p>}
 
       <h3 style={{ marginTop: "30px" }}>QR 코드로 공유</h3>
-      <QRCodeSVG
-        value={`http://localhost:3000/contracts/${contract._id}`}
-        size={180}
-        level="H"
-      />
+      <QRCodeSVG value={`http://localhost:3000/contracts/${contract._id}`} size={180} level="H" />
     </div>
   );
 };

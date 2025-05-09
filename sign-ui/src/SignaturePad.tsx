@@ -1,9 +1,16 @@
 import React, { useRef, useState, useEffect } from "react";
 import SignatureCanvas from "react-signature-canvas";
 
+// ✅ 타입 정의 추가
+interface Contract {
+  _id: string;
+  title: string;
+  signed: boolean;
+}
+
 const SignaturePad: React.FC = () => {
   const sigCanvas = useRef<SignatureCanvas>(null);
-  const [contractList, setContractList] = useState([]);
+  const [contractList, setContractList] = useState<Contract[]>([]);
   const [selectedContract, setSelectedContract] = useState("");
   const [signer, setSigner] = useState("");
   const [status, setStatus] = useState("");
@@ -21,6 +28,7 @@ const SignaturePad: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    const selected = contractList.find((c) => c._id === selectedContract);
     if (!selectedContract) {
       alert("서명할 계약서를 선택하세요.");
       return;
@@ -29,13 +37,20 @@ const SignaturePad: React.FC = () => {
       alert("서명자 이름을 입력하세요.");
       return;
     }
+    if (!selected) {
+      alert("계약서 정보를 찾을 수 없습니다.");
+      return;
+    }
+    if (selected.signed) {
+      alert("이미 서명된 계약서입니다.");
+      return;
+    }
     if (sigCanvas.current?.isEmpty()) {
       alert("서명을 입력하세요.");
       return;
     }
 
     const dataURL = sigCanvas.current?.getCanvas().toDataURL("image/png");
-
 
     try {
       const res = await fetch(`http://localhost:3001/api/contracts/${selectedContract}/sign`, {
@@ -69,7 +84,7 @@ const SignaturePad: React.FC = () => {
           style={{ padding: "8px", width: "100%" }}
         >
           <option value="">📄 서명할 계약서를 선택하세요</option>
-          {contractList.map((c: any) => (
+          {contractList.map((c) => (
             <option key={c._id} value={c._id}>
               {c.title}
             </option>

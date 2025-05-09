@@ -1,5 +1,3 @@
-// 📁 서버 파일: sign-server/index.js
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -22,20 +20,20 @@ mongoose.connection.on("error", (err) => {
   console.error("❌ MongoDB 연결 실패:", err);
 });
 
-// 🔸 계약서 모델
 const ContractSchema = new mongoose.Schema({
   title: String,
   content: String,
+  creator: String,
+  type: String,
   hash: String,
   createdAt: { type: Date, default: Date.now },
   signed: { type: Boolean, default: false },
   signer: { type: String, default: "" },
-  signatureData: { type: String, default: "" }, // 🔸 서명 이미지
+  signatureData: { type: String, default: "" }
 });
 
 const Contract = mongoose.model("Contract", ContractSchema);
 
-// 🔸 서명 모델
 const SignatureSchema = new mongoose.Schema({
   image: String,
   hash: String,
@@ -44,20 +42,24 @@ const SignatureSchema = new mongoose.Schema({
 
 const Signature = mongoose.model("Signature", SignatureSchema);
 
-// 🔸 계약서 저장
+// 계약서 생성
 app.post("/api/contracts", async (req, res) => {
-  const { title, content } = req.body;
-  if (!title || !content) return res.status(400).json({ error: "제목과 내용 입력" });
+  const { title, content, creator, type } = req.body;
+  if (!title || !content || !creator || !type) {
+    return res.status(400).json({ error: "모든 필드를 입력해야 합니다." });
+  }
+
   const hash = crypto.createHash("sha256").update(content).digest("hex");
+
   try {
-    const saved = await Contract.create({ title, content, hash });
-    res.status(201).json(saved);
+    const contract = await Contract.create({ title, content, creator, type, hash });
+    res.status(201).json(contract);
   } catch (err) {
     res.status(500).json({ error: "저장 실패", details: err });
   }
 });
 
-// 🔸 계약서 목록
+// 계약서 목록
 app.get("/api/contracts", async (req, res) => {
   try {
     const contracts = await Contract.find().sort({ createdAt: -1 });
@@ -67,7 +69,7 @@ app.get("/api/contracts", async (req, res) => {
   }
 });
 
-// 🔸 계약서 상세
+// 계약서 상세
 app.get("/api/contracts/:id", async (req, res) => {
   try {
     const contract = await Contract.findById(req.params.id);
@@ -78,7 +80,7 @@ app.get("/api/contracts/:id", async (req, res) => {
   }
 });
 
-// 🔸 계약서 서명
+// 계약서 서명
 app.patch("/api/contracts/:id/sign", async (req, res) => {
   try {
     const contract = await Contract.findById(req.params.id);
@@ -87,7 +89,6 @@ app.patch("/api/contracts/:id/sign", async (req, res) => {
     contract.signed = true;
     contract.signer = req.body.signer || "익명 사용자";
     contract.signatureData = req.body.signatureData || "";
-
     await contract.save();
 
     res.json({ message: "서명 완료", contract });
@@ -96,7 +97,36 @@ app.patch("/api/contracts/:id/sign", async (req, res) => {
   }
 });
 
-// 🔸 서명 저장
+// ✅ 생성자만 삭제 가능
+app.delete("/api/contracts/:id", async (req, res) => {
+  const { id } = req.params;
+  const name = req.query.name;
+
+  if (!name || typeof name !== "string") {
+    return res.status(400).json({ error: "삭제하려면 이름(name)이 필요합니다." });
+  }
+
+  try {
+    const contract = await Contract.findById(id);
+    if (!contract) {
+      return res.status(404).json({ error: "계약서를 찾을 수 없습니다." });
+    }
+
+    const inputName = name.trim().toLowerCase();
+    const creatorName = (contract.creator || "").trim().toLowerCase();
+
+    if (inputName !== creatorName) {
+      return res.status(403).json({ error: "계약서 생성자만 삭제할 수 있습니다." });
+    }
+
+    await Contract.findByIdAndDelete(id);
+    return res.status(200).json({ message: "계약서 삭제 성공" });
+  } catch (err) {
+    return res.status(500).json({ error: "삭제 중 서버 오류", details: err });
+  }
+});
+
+// 서명 저장
 app.post("/api/signatures", async (req, res) => {
   const { image, hash } = req.body;
   try {
@@ -107,7 +137,7 @@ app.post("/api/signatures", async (req, res) => {
   }
 });
 
-// 🔸 서명 목록
+// 서명 목록
 app.get("/api/signatures", async (req, res) => {
   try {
     const signatures = await Signature.find().sort({ createdAt: -1 });
@@ -117,7 +147,7 @@ app.get("/api/signatures", async (req, res) => {
   }
 });
 
-// 🔸 서명 삭제
+// 서명 삭제
 app.delete("/api/signatures/:id", async (req, res) => {
   try {
     const result = await Signature.findByIdAndDelete(req.params.id);

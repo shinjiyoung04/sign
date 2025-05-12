@@ -7,6 +7,20 @@ const CreateContract: React.FC = () => {
   const [type, setType] = useState("집 계약서");
   const [status, setStatus] = useState("");
 
+  const getPlaceholder = (type: string) => {
+    switch (type) {
+      case "집 계약서":
+        return "예시: 임대인과 임차인의 정보, 주소, 임대 기간, 보증금 및 월세 금액 등 입력";
+      case "등록금 계약서":
+        return "예시: 학생 이름, 학번, 등록금 금액, 납부 일정, 환불 조건 등 입력";
+      case "근로 계약서":
+        return "예시: 근로자와 고용주의 정보, 근무 시간, 급여, 계약 기간 등 입력";
+      case "기타":
+      default:
+        return "계약서 내용을 입력하세요";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -19,8 +33,7 @@ const CreateContract: React.FC = () => {
       const res = await fetch("http://localhost:3001/api/contracts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, content, creator, type })
-,
+        body: JSON.stringify({ title, content, creator, type }),
       });
 
       if (!res.ok) throw new Error("저장 실패");
@@ -47,7 +60,7 @@ const CreateContract: React.FC = () => {
           style={{ width: "100%", marginBottom: "10px", padding: "8px" }}
         />
         <textarea
-          placeholder="계약서 내용을 입력하세요"
+          placeholder={getPlaceholder(type)}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={10}

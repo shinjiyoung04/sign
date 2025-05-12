@@ -130,12 +130,33 @@ const ContractDetail: React.FC = () => {
             ref={sigCanvas}
             backgroundColor="#f0f0f0"
           />
-          <div style={{ marginTop: "10px" }}>
-            <button onClick={() => sigCanvas.current?.clear()} style={{ marginRight: "10px" }}>
-              지우기
-            </button>
-            <button onClick={handleSubmitSignature}>서명 제출</button>
-          </div>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+  <button
+    style={{
+      padding: "8px 16px",
+      backgroundColor: "#9e9e9e", // 지우기 버튼: 회색
+      color: "#fff",
+      border: "none",
+      borderRadius: "5px",
+      cursor: "pointer",
+    }}
+  >
+    지우기
+  </button>
+  <button
+    style={{
+      padding: "8px 16px",
+      backgroundColor: "#1976d2", // 서명 제출: 파란색
+      color: "#fff",
+      border: "none",
+      borderRadius: "5px",
+      cursor: "pointer",
+    }}
+  >
+    서명 제출
+  </button>
+</div>
+
         </div>
       )}
 

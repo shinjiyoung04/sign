@@ -1,35 +1,56 @@
 import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  NavLink
+} from "react-router-dom";
+
 import CreateContract from "./CreateContract";
 import ContractList from "./ContractList";
 import ContractDetail from "./ContractDetail";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import SignaturePad from "./SignaturePad";
 import SignatureList from "./SignatureList";
 import VerifyQR from "./VerifyQR";
 import QrHistory from "./QrHistory";
+import "./App.css";
 
 function App() {
+  const navLinks = [
+    { to: "/", label: "✍️ 서명하기" },
+    { to: "/create-contract", label: "📝 계약 생성" },
+    { to: "/contracts", label: "📄 계약 목록" },
+    { to: "/verify-qr", label: "🔍 QR 스캔" },
+  ];
+
   return (
     <Router>
-      <div style={{ padding: "20px" }}>
-      <nav style={{ marginBottom: "20px" }}>
-  <Link to="/" style={{ marginRight: "20px" }}>✍️ 서명하기</Link>
-  <Link to="/create-contract" style={{ marginRight: "20px" }}>📝 계약 생성</Link>
-  <Link to="/contracts" style={{ marginRight: "20px" }}>📄 계약 목록</Link>
-  <Link to="/verify-qr">🔍 QR 스캔</Link>
-</nav>
+      <div className="App">
+        <nav className="navbar">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                "nav-link" + (isActive ? " active" : "")
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </nav>
 
-
-        <Routes>
-          <Route path="/" element={<SignaturePad />} />
-          <Route path="/list" element={<SignatureList />} />
-          <Route path="/create-contract" element={<CreateContract />} />
-          <Route path="/contracts" element={<ContractList />} />
-          <Route path="/contracts/:id" element={<ContractDetail />} />
-          <Route path="/verify-qr" element={<VerifyQR />} />
-          <Route path="/qr-history" element={<QrHistory />} />
-
-        </Routes>
+        <div className="content">
+          <Routes>
+            <Route path="/" element={<SignaturePad />} />
+            <Route path="/list" element={<SignatureList />} />
+            <Route path="/create-contract" element={<CreateContract />} />
+            <Route path="/contracts" element={<ContractList />} />
+            <Route path="/contracts/:id" element={<ContractDetail />} />
+            <Route path="/verify-qr" element={<VerifyQR />} />
+            <Route path="/qr-history" element={<QrHistory />} />
+          </Routes>
+        </div>
       </div>
     </Router>
   );

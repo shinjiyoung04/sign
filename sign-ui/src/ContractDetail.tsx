@@ -12,6 +12,7 @@ interface Contract {
   signed: boolean;
   signer?: string;
   creator?: string;
+  filePath?: string;
 }
 
 const ContractDetail: React.FC = () => {
@@ -22,7 +23,12 @@ const ContractDetail: React.FC = () => {
   const [signerName, setSignerName] = useState("");
   const [showSignature, setShowSignature] = useState(false);
   const [status, setStatus] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
   const sigCanvas = useRef<SignatureCanvas>(null);
+  const [authRequired, setAuthRequired] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     fetch(`http://localhost:3001/api/contracts/${id}`)
@@ -30,7 +36,27 @@ const ContractDetail: React.FC = () => {
         if (!res.ok) throw new Error("계약서를 찾을 수 없습니다.");
         return res.json();
       })
-      .then((data) => setContract(data))
+      .then((data) => {
+        if (data.signed) {
+          setAuthRequired(true);
+          const name = prompt("서명된 계약서입니다. 열람을 위해 본인 이름을 입력하세요:");
+          if (
+            name &&
+            (name.trim().toLowerCase() === data.creator?.trim().toLowerCase() ||
+              name.trim().toLowerCase() === data.signer?.trim().toLowerCase())
+          ) {
+            setAuthorized(true);
+            setSignerName(name);
+          } else {
+            setError("접근 권한이 없습니다. 열람할 수 없습니다.");
+          }
+        } else {
+          setAuthorized(true);
+        }
+        setContract(data);
+        setEditTitle(data.title);
+        setEditContent(data.content);
+      })
       .catch((err) => setError(err.message));
   }, [id]);
 
@@ -66,9 +92,12 @@ const ContractDetail: React.FC = () => {
     }
   };
 
+  const handleClearSignature = () => {
+    sigCanvas.current?.clear();
+  };
+
   const handleDelete = async () => {
     if (!contract) return;
-
     const encodedName = encodeURIComponent(signerName.trim());
 
     try {
@@ -84,13 +113,37 @@ const ContractDetail: React.FC = () => {
     }
   };
 
-  // ✅ 생성자만 삭제 버튼 보이도록 처리 (공백, 대소문자 무시 비교)
+  const handleUpdate = async () => {
+    if (!contract) return;
+
+    try {
+      const res = await fetch(`http://localhost:3001/api/contracts/${contract._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editTitle, content: editContent }),
+      });
+
+      if (!res.ok) throw new Error("수정 실패");
+      const updated = await res.json();
+      setContract(updated.contract);
+      setIsEditing(false);
+      alert("✅ 계약서 수정 완료");
+    } catch {
+      alert("❌ 수정 중 오류 발생");
+    }
+  };
+
   const canDelete =
     signerName.trim().toLowerCase() &&
     contract?.creator?.trim().toLowerCase() === signerName.trim().toLowerCase();
 
   if (error) return <p style={{ padding: "30px", color: "red" }}>{error}</p>;
-  if (!contract) return <p style={{ padding: "30px" }}>불러오는 중...</p>;
+  if (!contract || (authRequired && !authorized)) return <p style={{ padding: "30px" }}>불러오는 중...</p>;
+
+  const fileUrl =
+    contract.filePath?.includes("uploads")
+      ? `http://localhost:3001/${contract.filePath.replace(/\\/g, "/")}`
+      : `http://localhost:3001/uploads/${contract.filePath?.replace(/\\/g, "/")}`;
 
   return (
     <div style={{ padding: "30px" }}>
@@ -98,24 +151,114 @@ const ContractDetail: React.FC = () => {
       <p><strong>작성일:</strong> {new Date(contract.createdAt).toLocaleString()}</p>
       <p><strong>서명 여부:</strong> {contract.signed ? "✅ 완료" : "❌ 미완료"}</p>
       <p><strong>서명자:</strong> {contract.signer || "없음"}</p>
+
+      {!contract.signed && !isEditing && (
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "10px" }}>
+          <button
+            onClick={() => setIsEditing(true)}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#757575",
+              color: "#fff",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+          >
+            ✏️ 수정하기
+          </button>
+        </div>
+      )}
+
+      {!contract.signed && isEditing && (
+        <div>
+          <input
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            style={{ width: "100%", padding: "8px", marginBottom: "10px" }}
+          />
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={8}
+            style={{ width: "100%", padding: "8px" }}
+          />
+          <div style={{ marginTop: "10px", display: "flex", gap: "10px", justifyContent: "center" }}>
+            <button
+              onClick={handleUpdate}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#2e7d32",
+                color: "#fff",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              💾 저장
+            </button>
+            <button
+              onClick={() => setIsEditing(false)}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#757575",
+                color: "#fff",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              ❌ 취소
+            </button>
+          </div>
+        </div>
+      )}
+
       <hr />
-      <pre style={{ whiteSpace: "pre-wrap", backgroundColor: "#f8f8f8", padding: "10px" }}>{contract.content}</pre>
+      {contract.filePath ? (
+        <div>
+          <h3>📄 첨부된 PDF 미리보기</h3>
+          <iframe
+            src={fileUrl}
+            width="100%"
+            height="600px"
+            title="계약서 PDF"
+            style={{ border: "1px solid #ccc" }}
+          />
+          <div style={{ marginTop: "10px", textAlign: "right" }}>
+            <a href={fileUrl} download style={{ backgroundColor: "#388e3c", color: "#fff", padding: "8px 16px", textDecoration: "none", borderRadius: "5px" }}>
+              ⬇️ PDF 다운로드
+            </a>
+          </div>
+        </div>
+      ) : (
+        <pre style={{ whiteSpace: "pre-wrap", backgroundColor: "#f8f8f8", padding: "10px" }}>{contract.content}</pre>
+      )}
       <hr />
       <p><strong>해시값:</strong><br />{contract.hash}</p>
 
-      <input
-        type="text"
-        placeholder="본인 이름 입력 (생성자만 삭제 가능)"
-        value={signerName}
-        onChange={(e) => setSignerName(e.target.value)}
-        style={{ padding: "8px", margin: "20px 0 10px 0", width: "300px" }}
-      />
+      <div style={{ display: "flex", justifyContent: "center", margin: "20px 0" }}>
+        <input
+          type="text"
+          placeholder="본인 이름 입력 (생성자만 삭제 가능)"
+          value={signerName}
+          onChange={(e) => setSignerName(e.target.value)}
+          style={{ padding: "8px", width: "300px" }}
+        />
+      </div>
 
       {!contract.signed && (
-        <div style={{ marginTop: "10px" }}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <button
             onClick={handleStartSign}
-            style={{ padding: "10px 20px", backgroundColor: "#1565c0", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#1565c0",
+              color: "#fff",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
           >
             서명 시작
           </button>
@@ -130,51 +273,61 @@ const ContractDetail: React.FC = () => {
             ref={sigCanvas}
             backgroundColor="#f0f0f0"
           />
-          <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-  <button
-    style={{
-      padding: "8px 16px",
-      backgroundColor: "#9e9e9e", // 지우기 버튼: 회색
-      color: "#fff",
-      border: "none",
-      borderRadius: "5px",
-      cursor: "pointer",
-    }}
-  >
-    지우기
-  </button>
-  <button
-    style={{
-      padding: "8px 16px",
-      backgroundColor: "#1976d2", // 서명 제출: 파란색
-      color: "#fff",
-      border: "none",
-      borderRadius: "5px",
-      cursor: "pointer",
-    }}
-  >
-    서명 제출
-  </button>
-</div>
-
+          <div style={{ display: "flex", gap: "12px", marginTop: "10px", justifyContent: "center" }}>
+            <button
+              onClick={handleClearSignature}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#9e9e9e",
+                color: "#fff",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              🗑️ 지우기
+            </button>
+            <button
+              onClick={handleSubmitSignature}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: "#66bb6a",
+                color: "#fff",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              서명 제출
+            </button>
+          </div>
         </div>
       )}
 
       {canDelete && (
-        <div style={{ marginTop: "20px" }}>
+        <div style={{ marginTop: "20px", display: "flex", justifyContent: "center" }}>
           <button
             onClick={handleDelete}
-            style={{ backgroundColor: "#d32f2f", color: "white", padding: "10px 20px", border: "none", borderRadius: "5px", cursor: "pointer" }}
+            style={{
+              backgroundColor: "#d32f2f",
+              color: "white",
+              padding: "10px 20px",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
           >
             🗑️ 계약서 삭제
           </button>
         </div>
       )}
 
-      {status && <p style={{ marginTop: "10px" }}>{status}</p>}
+      {status && <p style={{ marginTop: "10px", textAlign: "center" }}>{status}</p>}
 
-      <h3 style={{ marginTop: "30px" }}>QR 코드로 공유</h3>
-      <QRCodeSVG value={`http://localhost:3000/contracts/${contract._id}`} size={180} level="H" />
+      <h3 style={{ marginTop: "30px", textAlign: "center" }}>QR 코드로 공유</h3>
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <QRCodeSVG value={`http://localhost:3000/contracts/${contract._id}`} size={180} level="H" />
+      </div>
     </div>
   );
 };

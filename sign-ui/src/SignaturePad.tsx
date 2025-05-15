@@ -69,6 +69,9 @@ const SignaturePad: React.FC = () => {
       sigCanvas.current?.clear();
       setSigner("");
       setSelectedContract("");
+
+      // 서명한 계약서 제외하고 목록 갱신
+      setContractList((prev) => prev.filter((c) => c._id !== selectedContract));
     } catch (err) {
       console.error(err);
       setStatus("❌ 서명 실패");
@@ -86,11 +89,13 @@ const SignaturePad: React.FC = () => {
           style={{ padding: "8px", width: "100%" }}
         >
           <option value="">📄 서명할 계약서를 선택하세요</option>
-          {contractList.map((c) => (
-            <option key={c._id} value={c._id}>
-              {c.title}
-            </option>
-          ))}
+          {contractList
+            .filter((c) => !c.signed)
+            .map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.title}
+              </option>
+            ))}
         </select>
       </div>
 
@@ -109,7 +114,7 @@ const SignaturePad: React.FC = () => {
         backgroundColor="#f0f0f0"
       />
 
-      <div style={{ marginTop: "10px", display: "flex", gap: "10px" }}>
+      <div style={{ marginTop: "10px", display: "flex", gap: "10px", justifyContent: "center" }}>
         <button
           onClick={handleClear}
           style={{
@@ -127,7 +132,7 @@ const SignaturePad: React.FC = () => {
           onClick={handleSubmit}
           style={{
             padding: "8px 16px",
-            backgroundColor: "#1976d2",
+            backgroundColor: "#8bc34a",
             color: "#fff",
             border: "none",
             borderRadius: "5px",

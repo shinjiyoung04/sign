@@ -38,7 +38,7 @@ const VerifyQR: React.FC = () => {
 
   return (
     <div style={{ padding: "30px", textAlign: "center" }}>
-      <h2>📷 QR 코드 스캔</h2>
+      <h2>📷 QR 코드 스캔 후 계약서 찾기</h2>
       <div id="qr-reader" style={{ width: "300px", margin: "0 auto" }} />
     </div>
   );
